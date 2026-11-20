@@ -17,12 +17,12 @@ Download the plugin zip from the latest CI run (Actions → CI → `penguin-xaml
 
 ## Quick start
 
-1. Open an Avalonia project (or `samples/HelloAvalonia` from this repository), or start one with
+1. Open an Avalonia project (or `samples/HelloAvalonia` or `samples/ChessBoard` from this repository), or start one with
    File → New → Avalonia App (Penguin XAML).
 2. Open `MainWindow.axaml`. The window is drawn above its XAML.
 3. Open the **Penguin XAML Toolbox** and drag a Button onto the window. The label shows where it will land.
 4. Select, move, resize or delete controls; Ctrl+Z undoes each change. Arrow keys nudge, Ctrl+C / Ctrl+V / Ctrl+D
-   copy, paste and duplicate, Ctrl+mouse wheel zooms.
+   copy, paste and duplicate, Ctrl+mouse wheel zooms. Drag on an empty area to select several controls.
 5. Select a Grid and click the strip above or beside it to add a column or row; drag the dashed lines to resize.
 6. Double-click a button to write its Click handler in `MainWindow.axaml.cs`.
 

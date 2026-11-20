@@ -94,6 +94,8 @@ internal static class Messages
     {
         var inner = e;
         while (inner is System.Reflection.TargetInvocationException { InnerException: not null } t) inner = t.InnerException;
+        if (inner is System.Xml.XmlException x)
+            return $"Line {x.LineNumber}: the XAML isn't complete yet (a tag or a quote is not closed).";
         var msg = inner.Message;
         var nl = msg.IndexOf('\n');
         return nl > 0 ? msg[..nl].Trim() : msg.Trim();

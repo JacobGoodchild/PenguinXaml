@@ -36,9 +36,11 @@ public class Ui {
                 for (int k = codes.length - 1; k >= 0; k--) r.keyRelease(codes[k]);
             }
             case "type" -> {
+                String shifted = "~!@#$%^&*()_+{}|:\"<>?", plain = "`1234567890-=[]\\;',./";
                 for (char c : a[1].toCharArray()) {
-                    boolean up = Character.isUpperCase(c);
-                    int kc = KeyEvent.getExtendedKeyCodeForChar(c);
+                    int si = shifted.indexOf(c);
+                    boolean up = Character.isUpperCase(c) || si >= 0;
+                    int kc = KeyEvent.getExtendedKeyCodeForChar(si >= 0 ? plain.charAt(si) : c);
                     if (up) r.keyPress(KeyEvent.VK_SHIFT);
                     r.keyPress(kc); r.keyRelease(kc);
                     if (up) r.keyRelease(KeyEvent.VK_SHIFT);

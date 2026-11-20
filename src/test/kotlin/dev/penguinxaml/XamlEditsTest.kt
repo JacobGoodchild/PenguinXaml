@@ -120,3 +120,13 @@ class PropertiesTest {
         assertArrayEquals(arrayOf("Left", "Center", "Right", "Stretch"), dev.penguinxaml.toolwindows.PropertiesModel.choices("HorizontalAlignment"))
     }
 }
+
+class ParseMessageTest {
+    @Test fun `an unfinished tag is described plainly`() {
+        val e = assertThrows(XamlParseException::class.java) {
+            XamlDocument.parse("<StackPanel>\n  <CheckBox Content=\"A\"\n</StackPanel>")
+        }
+        assertEquals("<CheckBox> is missing its closing > or />.", e.message)
+        assertEquals(15, e.offset)
+    }
+}

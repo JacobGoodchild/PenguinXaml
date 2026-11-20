@@ -77,7 +77,17 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 - Tests: 19 (XAML edits, drop planning, code-behind, template, Properties rows, and the real helper drawing the
   sample with ids matching the plugin's count).
 
-**Fixed during IDE testing:** code-behind read without the read lock (IDE error); drop hint stuck after a drop;
+- Selection box (drag on empty space or an unselected panel's background); snapping while resizing.
+- ChessBoard sample (ItemsControl + UniformGrid, DataTemplate with bound classes, app resources and styles, design
+  data): drawn exactly as it runs; clicking a square selects the ItemsControl (template content isn't editable, as
+  in Visual Studio); double-click on a button with a handler jumps to the existing method.
+- Broken XAML: the last picture stays, a plain message names the line ("<CheckBox> is missing its closing > or
+  />."), and designer edits are refused until it's fixed (they're computed from the last readable text).
+- UserControl files use d:DesignWidth / d:DesignHeight (test).
+
+**Fixed during IDE testing:** project App.axaml styles were silently dropped (the Fluent theme assembly wasn't
+loaded when the XAML loader looked for it, and resources were loaded apart from the styles that use them; the
+first sample hid it because Fluent has its own "accent" button style) — now covered by a pixel test; code-behind read without the read lock (IDE error); drop hint stuck after a drop;
 New Project used a blocking open that hung when closing the current project; split layout flipped on undo.
 
 - Zoom (Ctrl+= twice → 156 %): redrawn sharp, clicks still hit the right control; handles keep their screen size.
@@ -93,8 +103,9 @@ New Project used a blocking open that hung when closing the current project; spl
 - The built zip itself, installed into a clean IntelliJ IDEA (not the dev sandbox): helper starts from the zip's
   `host/` folder and draws the sample (`docs/screenshots/ide-light-installed-from-zip.png`).
 
-**Not done:** GitHub Pages site; resize snapping; a `dotnet new` template for Rider's New Solution dialog;
-marquee (rubber-band) selection. (A rebuilt project restarts the helper so the new build is shown: .NET can't
+**Not done:** a `dotnet new` template for Rider's New Solution dialog (File → New → Avalonia App covers it; the
+official Avalonia.Templates package also works in Rider). No website is planned: the plugin's page is its
+Marketplace listing and the README. (A rebuilt project restarts the helper so the new build is shown: .NET can't
 unload the old one.)
 
 **Known rough edges:** the Outline isn't pinned to the side bar on first use (open it from View → Tool Windows);

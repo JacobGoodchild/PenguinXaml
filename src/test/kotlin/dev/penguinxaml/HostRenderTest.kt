@@ -65,4 +65,19 @@ class HostRenderTest {
         val img = javax.imageio.ImageIO.read(HostClient.parseRender(answer).png.inputStream())
         assertEquals(0xFF0000, img.getRGB(img.width / 2, img.height / 2) and 0xFFFFFF, "the App.axaml style should paint the border red")
     }
+
+    @Test fun `a UserControl uses its design size`() {
+        assumeTrue(dotnet != null && dll.exists(), "needs the built helper and .NET 10")
+        val uc = """
+            <UserControl xmlns="https://github.com/avaloniaui" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d"
+                         d:DesignWidth="320" d:DesignHeight="120">
+              <StackPanel><TextBlock Text="Card" /><Button Content="Open" /></StackPanel>
+            </UserControl>""".trimIndent()
+        val answer = render(uc, null)
+        assertTrue(answer.get("ok").asBoolean, answer.toString().take(300))
+        val r = HostClient.parseRender(answer)
+        assertEquals(320.0, r.width); assertEquals(120.0, r.height)
+        assertEquals(listOf("UserControl", "StackPanel", "TextBlock", "Button"), r.elements.map { it.type })
+    }
 }

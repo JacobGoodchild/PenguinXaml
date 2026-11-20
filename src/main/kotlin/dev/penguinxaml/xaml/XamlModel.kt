@@ -129,9 +129,11 @@ private class XamlParser(private val s: String) {
             if (i >= s.length) throw XamlParseException("<${el.name}> is not finished.", el.start)
             if (s[i] == '>') { el.startTagCloseAt = i; i++; el.startTagEnd = i; return }
             if (s.startsWith("/>", i)) { el.startTagCloseAt = i; i += 2; el.startTagEnd = i; el.selfClosing = true; return }
+            if (s[i] == '<') throw XamlParseException("<${el.name}> is missing its closing > or />.", el.start)
             val aStart = i
             val name = readName()
-            if (name.isEmpty()) throw XamlParseException("Unexpected character in <${el.name}>.", i)
+            if (name.isEmpty()) throw XamlParseException(
+                if (s[i] == '<') "<${el.name}> is missing its closing > or />." else "Unexpected character in <${el.name}>.", if (s[i] == '<') el.start else i)
             while (i < s.length && s[i].isWhitespace()) i++
             if (i >= s.length || s[i] != '=') throw XamlParseException("$name has no value.", aStart)
             i++

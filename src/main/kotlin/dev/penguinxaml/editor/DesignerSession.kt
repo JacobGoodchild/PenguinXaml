@@ -77,6 +77,8 @@ class DesignerSession(val project: Project, val file: VirtualFile, val document:
     }
 
     private fun renderNow() {
+        // While the XAML can't be read, keep the last picture and show what's wrong (in our own words).
+        if (error?.startsWith(XAML_PROBLEM) == true) return
         val gen = ++generation
         val text = ApplicationManager.getApplication().runReadAction<String> { document.text }
         val projectDir = projectDir()
@@ -129,6 +131,12 @@ class DesignerSession(val project: Project, val file: VirtualFile, val document:
     /** Applies [edits] as one undoable command named [name]. Returns false when the file couldn't be changed. */
     fun apply(name: String, edits: List<TextEdit>): Boolean {
         if (edits.isEmpty()) return true
+        // Edits are worked out from the last readable version of the file. If the text has changed since (it doesn't
+        // read as XAML right now), applying them could damage it: refuse and say why.
+        if (model.text != document.text) {
+            Notifications.info(project, "Fix the XAML first: the design view can't change the file while it has a problem.")
+            return false
+        }
         if (!FileDocumentManager.getInstance().requestWriting(document, project)) return false
         WriteCommandAction.runWriteCommandAction(project, name, GROUP, {
             for (e in edits.sortedByDescending { it.start }) document.replaceString(e.start, e.end, e.text)
@@ -151,6 +159,10 @@ class DesignerSession(val project: Project, val file: VirtualFile, val document:
      * code-behind at the handler. This is what double-clicking a control or an event in Properties does.
      */
     fun goToHandler(el: XamlElement, event: String, args: String = "RoutedEventArgs") {
+        if (model.text != document.text) {
+            Notifications.info(project, "Fix the XAML first: the design view can't change the file while it has a problem.")
+            return
+        }
         val csFile = codeBehindFile()
         val className = model.root?.attrValue("x:Class")
         if (csFile == null || className == null) {
