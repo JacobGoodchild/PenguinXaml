@@ -18,18 +18,20 @@ object DotnetLocator {
 
     /** The outcome of a search: [found] is the program to use (null: none has .NET 10), [checked] says where it looked. */
     data class Search(val found: File?, val checked: List<Checked>) {
-        /** Plain-English list of the places looked, for error messages. */
-        fun describe(): String = checked.joinToString("\n") { c ->
-            when {
-                !c.exists -> "  ${c.path} (not there)"
-                c.runtimes.isEmpty() -> "  ${c.path} (no .NET runtime reported)"
-                else -> "  ${c.path} (has .NET ${c.runtimes.joinToString(", ")})"
+        /** Plain-English summary of where it looked, for error messages: what was found, then the places searched. */
+        fun describe(): String {
+            val found = checked.filter { it.exists }.map { c ->
+                if (c.runtimes.isEmpty()) "  ${c.path} (didn't report any .NET version)"
+                else "  ${c.path} (has .NET ${c.runtimes.joinToString(", ")})"
             }
+            val searched = "  Searched: DOTNET_ROOT, every folder on PATH, ~/.dotnet, /usr/share/dotnet, " +
+                "/usr/lib/dotnet, /usr/lib64/dotnet, /opt/dotnet, /snap/bin and Rider's own .NET."
+            return (if (found.isEmpty()) listOf("  No dotnet program was found.") else found).joinToString("\n") + "\n" + searched
         }
     }
 
     /** Every place a `dotnet` program could be, in order, without duplicates. Nothing is run. */
-    internal fun candidates(configured: String?, env: Map<String, String>, home: String?): List<File> {
+    internal fun candidates(configured: String?, env: Map<String, String>, home: String?, ideHome: String? = null): List<File> {
         val list = mutableListOf<File>()
         configured?.takeIf { it.isNotBlank() }?.let { list += File(it.trim()) }
         env["DOTNET_ROOT"]?.takeIf { it.isNotBlank() }?.let { list += File(it, "dotnet") }
@@ -38,6 +40,8 @@ object DotnetLocator {
         }
         home?.let { list += File(it, ".dotnet/dotnet") }
         wellKnown.forEach { list += File(it) }
+        // Last resort: the .NET that Rider itself runs its backend on (used only if it is .NET 10 or newer).
+        ideHome?.let { h -> for (arch in listOf("linux-x64", "linux-arm64")) list += File(h, "lib/ReSharperHost/$arch/dotnet/dotnet") }
         val seen = HashSet<String>()
         return list.filter { seen.add(it.absolutePath) }
     }
@@ -62,7 +66,8 @@ object DotnetLocator {
 
     /** Searches every candidate (runs `dotnet --list-runtimes` on each that exists; call off the UI thread). */
     fun search(configured: String? = null): Search {
-        val s = choose(candidates(configured, System.getenv(), System.getProperty("user.home")), ::runtimes)
+        val ideHome = try { com.intellij.openapi.application.PathManager.getHomePath() } catch (_: Exception) { null }
+        val s = choose(candidates(configured, System.getenv(), System.getProperty("user.home"), ideHome), ::runtimes)
         last = (configured ?: "") to s
         return s
     }

@@ -95,7 +95,7 @@ class HostClient : Disposable {
         val dotnet = search.found ?: throw HostException(
             "Penguin XAML needs the .NET 10 runtime to draw the design view, and couldn't find it.\n" +
             "Install .NET 10 (for example: sudo apt install dotnet-runtime-10.0), then reopen the file.\n" +
-            "Places checked:\n" + search.describe())
+            "Where it looked:\n" + search.describe())
         val dll = hostDll() ?: throw HostException("The design helper is missing from the plugin. Try reinstalling Penguin XAML.")
         val cmd = GeneralCommandLine(dotnet.path, dll.toString())
             .withEnvironment("DOTNET_CLI_TELEMETRY_OPTOUT", "1")

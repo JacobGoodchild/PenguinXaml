@@ -252,12 +252,23 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         session.error?.let { msg ->
             g.font = UIUtil.getLabelFont()
             val fm = g.fontMetrics
-            val lines = msg.lines()
-            val y0 = height - JBUI.scale(12) - fm.height * lines.size
+            // Wrapped to the visible width (the design pane can be narrow).
+            val maxW = (visibleRect.width - JBUI.scale(24)).coerceAtLeast(JBUI.scale(120))
+            val lines = msg.lines().flatMap { line ->
+                val indent = line.takeWhile { it == ' ' }
+                val out = mutableListOf<String>(); var cur = ""
+                for (word in line.trim().split(' ')) {
+                    val next = if (cur.isEmpty()) indent + word else "$cur $word"
+                    if (fm.stringWidth(next) > maxW && cur.isNotEmpty()) { out += cur; cur = indent + word } else cur = next
+                }
+                out + cur
+            }
+            val vr = visibleRect
+            val y0 = vr.y + vr.height - JBUI.scale(12) - fm.height * lines.size
             g.color = JBColor.namedColor("Notification.errorBackground", JBColor(0xFFF0F0, 0x402020))
-            g.fillRect(0, y0 - JBUI.scale(6), width, height - y0 + JBUI.scale(6))
+            g.fillRect(vr.x, y0 - JBUI.scale(6), vr.width, vr.y + vr.height - y0 + JBUI.scale(6))
             g.color = JBColor.namedColor("Notification.errorForeground", UIUtil.getLabelForeground())
-            lines.forEachIndexed { i, l -> g.drawString(l, JBUI.scale(12), y0 + fm.ascent + i * fm.height) }
+            lines.forEachIndexed { i, l -> g.drawString(l, vr.x + JBUI.scale(12), y0 + fm.ascent + i * fm.height) }
         }
         if (r == null && session.error == null) {
             g.color = UIUtil.getContextHelpForeground()
