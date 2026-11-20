@@ -102,7 +102,8 @@ val publishHost by tasks.registering(Exec::class) {
     commandLine(
         dotnet, "publish", file("host/PenguinXaml.Host/PenguinXaml.Host.csproj").absolutePath,
         "-c", "Release", "-r", "linux-x64", "--self-contained", "false", "-p:RestoreLockedMode=true",
-        "-p:DebugType=none", "-o", hostOut.get().asFile.absolutePath,
+        // Precompiled (ReadyToRun): the first drawing is much faster than with everything compiled at start.
+        "-p:DebugType=none", "-p:PublishReadyToRun=true", "-o", hostOut.get().asFile.absolutePath,
     )
 }
 
