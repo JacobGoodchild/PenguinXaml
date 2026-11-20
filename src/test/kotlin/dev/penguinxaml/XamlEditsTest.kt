@@ -130,3 +130,13 @@ class ParseMessageTest {
         assertEquals(15, e.offset)
     }
 }
+
+class ProjectImagesTest {
+    @Test fun `lists project images as XAML paths, not build output`() {
+        val dir = java.nio.file.Files.createTempDirectory("imgs").toFile()
+        java.io.File(dir, "Assets").mkdirs(); java.io.File(dir, "Assets/logo.png").writeText("x")
+        java.io.File(dir, "bin/Debug").mkdirs(); java.io.File(dir, "bin/Debug/copy.png").writeText("x")
+        java.io.File(dir, "readme.txt").writeText("x")
+        assertEquals(listOf("/Assets/logo.png"), dev.penguinxaml.toolwindows.PropertiesModel.projectImages(dir))
+    }
+}

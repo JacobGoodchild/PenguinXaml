@@ -92,7 +92,7 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 
 - Unbuilt project with design data: the design view says "Build the project to see your sample data in bindings."
   instead of showing silent blanks. Helper is precompiled (ReadyToRun): first drawing ~0.6 s, then ~0.15 s for the
-  chess window at 200 %.
+  chess window at 200 %. Image Source in Properties offers the project's own images (/Assets/...).
 
 **Fixed during IDE testing:** project App.axaml styles were silently dropped (the Fluent theme assembly wasn't
 loaded when the XAML loader looked for it, and resources were loaded apart from the styles that use them; the

@@ -217,7 +217,9 @@ class PropertiesFactory : DesignerToolWindowFactory() {
         val table = object : JBTable(model) {
             // Properties with a fixed set of values get a drop-down (you can still type anything).
             override fun getCellEditor(row: Int, column: Int): javax.swing.table.TableCellEditor {
-                val choices = model.rows.getOrNull(row)?.let { PropertiesModel.choices(it.name) }
+                val name = model.rows.getOrNull(row)?.name
+                val choices = (if (name == "Source") model.session?.projectDir()?.let { PropertiesModel.projectImages(java.io.File(it)) }?.toTypedArray()
+                               else name?.let { PropertiesModel.choices(it) })
                     ?: return super.getCellEditor(row, column)
                 val box = com.intellij.openapi.ui.ComboBox(arrayOf("") + choices)
                 box.isEditable = true
@@ -288,6 +290,13 @@ class PropertiesModel : AbstractTableModel() {
     }
 
     companion object {
+        /** The project's images as XAML paths ("/Assets/logo.png"), for an Image's Source. Skips build folders. */
+        fun projectImages(projectDir: java.io.File): List<String> = projectDir.walkTopDown()
+            .onEnter { it.name !in setOf("bin", "obj", ".git", ".idea", "node_modules") }
+            .filter { it.isFile && it.extension.lowercase() in setOf("png", "jpg", "jpeg", "gif", "bmp", "ico", "webp") }
+            .map { "/" + it.relativeTo(projectDir).invariantSeparatorsPath }
+            .sorted().take(200).toList()
+
         /** The values a property can take, when it is one of a few (null: free text). */
         fun choices(name: String): Array<String>? = when (name) {
             "HorizontalAlignment" -> arrayOf("Left", "Center", "Right", "Stretch")
