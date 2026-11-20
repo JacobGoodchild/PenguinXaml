@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="HelloAvalonia.MainWindow"
+        Title="Hello Avalonia" Width="480" Height="300">
+  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,*" Margin="16">
+    <TextBlock Grid.ColumnSpan="2" Text="Welcome" FontSize="24" FontWeight="SemiBold" />
+    <StackPanel Grid.Row="1" Spacing="8" Margin="0,12,8,0">
+      <TextBox x:Name="NameBox" Watermark="Your name" />
+      <CheckBox Content="Remember me" />
+    </StackPanel>
+    <Image Grid.Row="1" Grid.Column="1" Source="/Assets/penguin.png" Width="96" Height="96" />
+    <Button Grid.Row="2" Grid.Column="1" x:Name="OkButton" Classes="accent" Content="Say hello"
+            HorizontalAlignment="Right" Click="OkButton_Click" />
+  </Grid>
+</Window>

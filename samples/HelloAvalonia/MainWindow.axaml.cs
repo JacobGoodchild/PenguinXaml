@@ -1,0 +1,17 @@
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+
+namespace HelloAvalonia;
+
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void OkButton_Click(object? sender, RoutedEventArgs e)
+    {
+        Title = $"Hello, {NameBox.Text}";
+    }
+}

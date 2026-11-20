@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Tests and plugin zip
+        run: ./gradlew test buildPlugin --console=plain
+      - name: The built zip contains the helper and every licence file
+        run: |
+          unzip -l build/distributions/*.zip | tee zip.txt
+          grep -q 'host/PenguinXaml.Host.dll' zip.txt
+          grep -q 'licenses/THIRD-PARTY-NOTICES.md' zip.txt
+          grep -q 'licenses/Avalonia-LICENSE.md' zip.txt
+      - name: Sample app builds
+        run: dotnet build samples/HelloAvalonia
+      - uses: actions/upload-artifact@v4
+        with:
+          name: penguin-xaml-plugin
+          path: build/distributions/*.zip
+
+  verify-plugin:
+    # Marketplace build: Rider only, signed with the repository's secrets (CERTIFICATE_CHAIN, PRIVATE_KEY,
+    # PRIVATE_KEY_PASSWORD), then JetBrains' plugin checker against Rider 2026.1, 2026.2 and 2026.3.
+    # Each Rider is a ~3 GB download, so this runs only when started by hand (Actions → CI → Run workflow).
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Make room
+        run: sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL && df -h /
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Signed Marketplace build and its signature check
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+        run: ./gradlew signPlugin verifyPluginSignature -PriderOnly=true --console=plain
+      - uses: actions/upload-artifact@v4
+        with:
+          name: penguin-xaml-marketplace
+          path: build/distributions/*-signed.zip
+      - name: Plugin checker (Rider 2026.1, 2026.2, 2026.3)
+        run: ./gradlew verifyPlugin -PriderOnly=true --console=plain

@@ -56,7 +56,7 @@ public static class Renderer
             surface.Child = new ContentControl { Content = content };
             CopyWindowLook(w, surface);
             DesignId.SetId(surface, DesignId.GetId(w));
-            if (w.RequestedThemeVariant != null) host.RequestedThemeVariant = w.RequestedThemeVariant;
+            if (w.IsSet(ThemeVariantScope.RequestedThemeVariantProperty) && w.RequestedThemeVariant != ThemeVariant.Default) host.RequestedThemeVariant = w.RequestedThemeVariant;
         }
         else if (loaded is Control c)
         {
