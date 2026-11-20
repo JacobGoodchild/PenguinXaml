@@ -4,7 +4,7 @@ import java.awt.event.KeyEvent;
 
 /**
  * Drives the test IDE on the Xvfb display (test machine only): java tools/Ui.java click X Y | dblclick X Y |
- * drag X1 Y1 X2 Y2 | key NAME [NAME...] (e.g. key ctrl z) | type TEXT | move X Y.
+ * ctrlclick X Y | drag X1 Y1 X2 Y2 | key NAME [NAME...] (e.g. key ctrl z) | type TEXT | move X Y.
  */
 public class Ui {
     public static void main(String[] a) throws Exception {
@@ -13,6 +13,7 @@ public class Ui {
         switch (a[0]) {
             case "move" -> r.mouseMove(i(a[1]), i(a[2]));
             case "click" -> { r.mouseMove(i(a[1]), i(a[2])); click(r, 1); }
+            case "ctrlclick" -> { r.mouseMove(i(a[1]), i(a[2])); r.keyPress(KeyEvent.VK_CONTROL); click(r, 1); r.keyRelease(KeyEvent.VK_CONTROL); }
             case "dblclick" -> { r.mouseMove(i(a[1]), i(a[2])); click(r, 2); }
             case "drag" -> {
                 int x1 = i(a[1]), y1 = i(a[2]), x2 = i(a[3]), y2 = i(a[4]);

@@ -15,6 +15,9 @@ import dev.penguinxaml.util.UiText
 import java.io.File
 import java.nio.file.Path
 import javax.swing.JComponent
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import com.intellij.openapi.application.EDT
 
 /** The files of a new Avalonia app, ready to open in the designer and to run. */
 object ProjectTemplate {
@@ -156,6 +159,10 @@ object ProjectTemplate {
     }
 }
 
+/** Gives the New App action a coroutine scope that lives as long as the IDE. */
+@com.intellij.openapi.components.Service(com.intellij.openapi.components.Service.Level.APP)
+class OpenerScope(val scope: kotlinx.coroutines.CoroutineScope)
+
 /** File | New | Avalonia App (Penguin XAML)…: a ready-to-run app whose MainWindow opens in the designer. */
 class NewAvaloniaAppAction : DumbAwareAction() {
     override fun getActionUpdateThread() = ActionUpdateThread.BGT
@@ -169,7 +176,16 @@ class NewAvaloniaAppAction : DumbAwareAction() {
             Messages.showErrorDialog(UiText.dialog(ex.message ?: "Couldn't create the project."), "New Avalonia App")
             return
         }
-        ProjectUtil.openOrImport(Path.of(root.path), OpenProjectTask { forceOpenInNewFrame = true })
+        val main = File(root, "${dialog.name.text.trim()}/MainWindow.axaml")
+        // Opening a project may first close the current one, so it runs in the background, not on the UI thread.
+        com.intellij.openapi.components.service<OpenerScope>().scope.launch {
+            val project = ProjectUtil.openOrImportAsync(Path.of(root.path), OpenProjectTask { forceOpenInNewFrame = true }) ?: return@launch
+            // Start where a WPF user expects: the main window open in the designer.
+            val file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(main) ?: return@launch
+            withContext(kotlinx.coroutines.Dispatchers.EDT) {
+                if (!project.isDisposed) com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(file, true)
+            }
+        }
     }
 }
 

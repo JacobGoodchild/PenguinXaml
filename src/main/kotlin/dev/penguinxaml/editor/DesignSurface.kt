@@ -428,7 +428,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         val SELECT = JBColor(0x3574F0, 0x548AF7)
         val DROP = JBColor(0x3574F0, 0x548AF7)
         val DROP_FILL = JBColor(Color(0x35, 0x74, 0xF0, 0x22), Color(0x54, 0x8A, 0xF7, 0x33))
-        val RAIL = JBColor(Color(0, 0, 0, 0x14), Color(255, 255, 255, 0x1A))
+        val RAIL = JBColor(Color(0x35, 0x74, 0xF0, 0x30), Color(0x54, 0x8A, 0xF7, 0x40))
         val DASH = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 3f), 0f)
 
         fun margin(v: String?): DoubleArray {

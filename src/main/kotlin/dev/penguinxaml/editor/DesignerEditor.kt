@@ -28,7 +28,7 @@ class DesignerEditorProvider : FileEditorProvider, DumbAware {
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         val text = TextEditorProvider.getInstance().createEditor(project, file) as TextEditor
         val design = DesignerFileEditor(project, file, text)
-        return TextEditorWithPreview(text, design, "Penguin XAML", TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW, true)
+        return TextEditorWithPreview(text, design, "Penguin XAML", TextEditorWithPreview.Layout.SHOW_EDITOR_AND_PREVIEW, false)
     }
 
     override fun getEditorTypeId() = "penguinxaml-designer"
