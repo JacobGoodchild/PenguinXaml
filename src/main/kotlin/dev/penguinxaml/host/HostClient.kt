@@ -49,6 +49,8 @@ class HostClient : Disposable {
     private var input: BufferedWriter? = null
     private var output: BufferedReader? = null
     private var nextId = 1L
+    /** The project build output the running helper has loaded (path and time); a new build needs a fresh helper. */
+    private var loadedBuild: String? = null
 
     @Synchronized
     fun render(xaml: String, appXaml: String?, projectDir: String?, scale: Double, dark: Boolean, assemblies: List<String>): RenderResult {
@@ -61,7 +63,10 @@ class HostClient : Disposable {
             addProperty("theme", if (dark) "Dark" else "Light")
             add("assemblies", gson.toJsonTree(assemblies))
         }
+        val build = buildSignature(assemblies)
+        if (build.isNotEmpty() && loadedBuild != null && loadedBuild != build) stop() // .NET can't unload the old build
         val answer = call(req)
+        if (build.isNotEmpty()) loadedBuild = build
         return parseRender(answer)
     }
 
@@ -113,7 +118,7 @@ class HostClient : Disposable {
             try { input?.close() } catch (_: Exception) {}
             if (!p.waitFor(2, TimeUnit.SECONDS)) p.destroyForcibly()
         }
-        process = null; input = null; output = null
+        process = null; input = null; output = null; loadedBuild = null
     }
 
     override fun dispose() = stop()
@@ -127,6 +132,9 @@ class HostClient : Disposable {
             val dir = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.pluginPath ?: return null
             return dir.resolve("host/PenguinXaml.Host.dll").takeIf { File(it.toString()).exists() }
         }
+
+        internal fun buildSignature(assemblies: List<String>) =
+            assemblies.joinToString("|") { "$it@${File(it).lastModified()}" }
 
         internal fun parseRender(obj: JsonObject): RenderResult {
             val els = obj.getAsJsonArray("elements").map { it.asJsonObject }.map { e ->

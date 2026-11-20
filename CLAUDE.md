@@ -45,6 +45,9 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 
 - `./gradlew test buildPlugin` → `build/distributions/penguin-xaml-<version>.zip` (Java 21, .NET 10 SDK). Built
   against IntelliJ IDEA 2026.1.5.1 (oldest supported platform); no until-build.
+- `./gradlew verifyPlugin -PverifyRiders=2026.1` checks one Rider; `-PverifyLocalIde=/path` an IDE on disk.
+- `tools/run-idea.sh <project> <log> [file]` starts the test IDE on Xvfb :99 (`UISCALE=2` for 200 %),
+  `tools/ui.sh` clicks/drags/types, `tools/shot.sh` takes screenshots (test machine only).
 - `./gradlew runIdea -PopenPath=samples/HelloAvalonia -PtestMachine` for UI checks in the free IntelliJ IDEA (the
   sandbox Rider needs a login). `-PuiScale=2` simulates a 200 % screen.
 - CI (`.github/workflows/ci.yml`): tests, zip, zip contents check, sample build; hand-started signed Marketplace
@@ -71,15 +74,22 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 - No Penguin XAML panels in a project without XAML.
 - File → New → Avalonia App (Penguin XAML)…: dialog, files written, project opens and lands in the designer; the
   generated app builds with `dotnet build` (0 warnings).
-- Unit tests: 17 (XAML edits, drop planning, code-behind, template, Properties rows).
+- Tests: 19 (XAML edits, drop planning, code-behind, template, Properties rows, and the real helper drawing the
+  sample with ids matching the plugin's count).
 
 **Fixed during IDE testing:** code-behind read without the read lock (IDE error); drop hint stuck after a drop;
 New Project used a blocking open that hung when closing the current project; split layout flipped on undo.
 
-**Written, not yet checked:** zoom (Ctrl+wheel, Ctrl+= / Ctrl+- / Ctrl+0) — compiled, no screenshot yet.
+- Zoom (Ctrl+= twice → 156 %): redrawn sharp, clicks still hit the right control; handles keep their screen size.
+- Copy / cut / paste / duplicate (Ctrl+C/X/V/D): duplicate checked in the IDE; names stay unique (NameBox → NameBox1).
+- Snap lines while moving (edges and centres of siblings and the container): screenshot mid-drag.
+- Design-time data: `<Design.DataContext>` with the project's own view model shows bound text (helper render,
+  `docs/screenshots/helper-design-data-binding-shows-view-model-text.png`); without a build it draws without it.
+- Plugin checker: compatible with IntelliJ IDEA 2026.1 and **real Rider 2026.1 (RD-261.22158.336), no warnings**.
 
-**Not done:** snap lines; copy/paste; design-time sample data for bindings; GitHub Pages site; plugin checker
-against real Rider 2026.1/2026.2/2026.3 (CI job `verify-plugin`, run by hand; each Rider is a 3 GB download).
+**Not done:** GitHub Pages site; resize snapping; a `dotnet new` template for Rider's New Solution dialog;
+marquee (rubber-band) selection. (A rebuilt project restarts the helper so the new build is shown: .NET can't
+unload the old one.)
 
 **Known rough edges:** the Outline isn't pinned to the side bar on first use (open it from View → Tool Windows);
 the design view follows the IDE's light/dark theme (an app set to a fixed theme is shown in that theme).

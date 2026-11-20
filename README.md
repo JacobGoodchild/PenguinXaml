@@ -3,7 +3,7 @@
 A drag-and-drop XAML designer for [Avalonia](https://avaloniaui.net) apps in JetBrains Rider on Linux, modelled on
 the classic WPF designer: XAML for the look, C# code-behind, and a design view kept in sync with the XAML.
 
-![The sample window drawn by Penguin XAML's design helper](docs/screenshots/helper-sample-light-200pc.png)
+![Penguin XAML in the IDE: Document Outline, XAML, design view and Properties](docs/screenshots/ide-dark-multi-select-outline-and-shared-properties.png)
 
 ## Requirements
 
@@ -12,16 +12,21 @@ the classic WPF designer: XAML for the look, C# code-behind, and a design view k
 
 ## Install
 
-Download the plugin zip from the latest CI run (Actions → CI → `penguin-xaml-plugin`), then in Rider:
-Settings → Plugins → gear icon → Install Plugin from Disk.
+Download the plugin zip from the latest CI run (Actions → CI → `penguin-xaml-plugin`; unzip the download once to get
+`penguin-xaml-<version>.zip`), then in Rider: Settings → Plugins → gear icon → Install Plugin from Disk.
 
 ## Quick start
 
-1. Open an Avalonia project (or `samples/HelloAvalonia` from this repository).
+1. Open an Avalonia project (or `samples/HelloAvalonia` from this repository), or start one with
+   File → New → Avalonia App (Penguin XAML).
 2. Open `MainWindow.axaml`. The window is drawn above its XAML.
 3. Open the **Penguin XAML Toolbox** and drag a Button onto the window. The label shows where it will land.
-4. Select, move, resize or delete controls; Ctrl+Z undoes each change.
-5. Double-click a button to write its Click handler in `MainWindow.axaml.cs`.
+4. Select, move, resize or delete controls; Ctrl+Z undoes each change. Arrow keys nudge, Ctrl+C / Ctrl+V / Ctrl+D
+   copy, paste and duplicate, Ctrl+mouse wheel zooms.
+5. Select a Grid and click the strip above or beside it to add a column or row; drag the dashed lines to resize.
+6. Double-click a button to write its Click handler in `MainWindow.axaml.cs`.
+
+Bindings show real values when the window has a `<Design.DataContext>` and the project has been built.
 
 ## Credits
 
