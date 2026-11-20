@@ -26,4 +26,12 @@
                 factoryClass="dev.penguinxaml.toolwindows.OutlineFactory" doNotActivateOnStart="true"/>
     <notificationGroup id="Penguin XAML" displayType="BALLOON"/>
   </extensions>
+
+  <actions>
+    <action id="PenguinXaml.NewAvaloniaApp" class="dev.penguinxaml.project.NewAvaloniaAppAction"
+            text="Avalonia App (Penguin XAML)…" description="Create a new Avalonia window app to design and run">
+      <add-to-group group-id="NewProjectOrModuleGroup" anchor="last"/>
+      <add-to-group group-id="WelcomeScreen.QuickStart" anchor="last"/>
+    </action>
+  </actions>
 </idea-plugin>

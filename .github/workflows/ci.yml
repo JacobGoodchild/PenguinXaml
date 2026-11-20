@@ -25,6 +25,8 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Tests and plugin zip
+        env:
+          PENGUINXAML_BUILD_TESTS: '1'
         run: ./gradlew test buildPlugin --console=plain
       - name: The built zip contains the helper and every licence file
         run: |

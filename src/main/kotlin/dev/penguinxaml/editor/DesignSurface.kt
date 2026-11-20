@@ -48,12 +48,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         }
         addMouseListener(mouse)
         addMouseMotionListener(mouse)
-        addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_DELETE || e.keyCode == KeyEvent.VK_BACK_SPACE) { deleteSelection(); e.consume() }
-                if (e.keyCode == KeyEvent.VK_ESCAPE) { session.selectedElements.firstOrNull()?.parent?.let { p -> if (!p.isPropertyElement) session.select(listOf(p.designId)) } }
-            }
-        })
+        registerShortcuts()
         DropTarget(this, DnDConstants.ACTION_COPY, object : DropTargetAdapter() {
             override fun dragOver(e: DropTargetDragEvent) {
                 val type = toolType(e.transferable) ?: run { e.rejectDrag(); return }
@@ -64,13 +59,13 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 toolTipText = plan?.let { "$type → ${it.label}" }
                 repaint()
             }
-            override fun dragExit(dte: DropTargetEvent) { plan = null; ghost = null; repaint() }
+            override fun dragExit(dte: DropTargetEvent) { plan = null; ghost = null; toolTipText = null; repaint() }
             override fun drop(e: DropTargetDropEvent) {
                 e.acceptDrop(DnDConstants.ACTION_COPY)
                 val type = toolType(e.transferable)
                 val (x, y) = toDesign(e.location.x, e.location.y)
                 val p = planFor(x, y, x, y, null)
-                plan = null; ghost = null
+                plan = null; ghost = null; toolTipText = null
                 if (type != null && p != null) insertControl(type, p)
                 e.dropComplete(type != null && p != null)
                 requestFocusInWindow()
@@ -81,6 +76,48 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
     }
 
     override fun dispose() {}
+
+    /**
+     * Keys go through the IDE's own actions first, so a plain key listener would lose Delete and the arrows to the
+     * editor. Registering them as actions on this component gives the design view first say while it has focus.
+     */
+    private fun registerShortcuts() {
+        fun on(keys: String, run: () -> Unit) {
+            val set = com.intellij.openapi.actionSystem.CustomShortcutSet(*keys.split('|').map {
+                com.intellij.openapi.actionSystem.KeyboardShortcut(javax.swing.KeyStroke.getKeyStroke(it), null) }.toTypedArray())
+            object : com.intellij.openapi.project.DumbAwareAction() {
+                override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) = run()
+            }.registerCustomShortcutSet(set, this)
+        }
+        on("DELETE|BACK_SPACE") { deleteSelection() }
+        on("ESCAPE") { session.selectedElements.firstOrNull()?.parent?.let { p -> (if (p.isPropertyElement) p.parent else p)?.let { session.select(listOf(it.designId)) } } }
+        on("ctrl A") { session.select(session.model.objects.filter { it.designId != 0 && it.parent?.let { p -> if (p.isPropertyElement) p.parent else p }?.designId == session.model.objects.getOrNull(1)?.designId }.map { it.designId }) }
+        for ((key, dx, dy) in listOf(Triple("LEFT", -1, 0), Triple("RIGHT", 1, 0), Triple("UP", 0, -1), Triple("DOWN", 0, 1))) {
+            on(key) { nudge(dx.toDouble(), dy.toDouble()) }
+            on("shift $key") { nudge(dx * 10.0, dy * 10.0) }
+        }
+        on("ENTER") { session.selectedElements.singleOrNull()?.let { el -> Toolbox.defaultEvent(el.localName)?.let { session.goToHandler(el, it.first, it.second) } } }
+    }
+
+    /** Arrow keys move the selected controls by changing Canvas.Left/Top or the Margin (one undo step). */
+    private fun nudge(dx: Double, dy: Double) {
+        val doc = session.model
+        val els = session.selectedElements.filter { it.designId != 0 }
+        if (els.isEmpty()) return
+        val edits = els.flatMap { el ->
+            val parentName = el.parent?.let { if (it.isPropertyElement) it.parent else it }?.localName
+            if (parentName == "Canvas") {
+                val l = (el.attrValue("Canvas.Left")?.toDoubleOrNull() ?: 0.0) + dx
+                val t = (el.attrValue("Canvas.Top")?.toDoubleOrNull() ?: 0.0) + dy
+                XamlEdits.setAttributes(doc, el, linkedMapOf("Canvas.Left" to DropPlanner.fmt(l), "Canvas.Top" to DropPlanner.fmt(t)))
+            } else {
+                val m = margin(el.attrValue("Margin"))
+                m[0] += dx; m[1] += dy
+                XamlEdits.setAttribute(doc, el, "Margin", m.joinToString(",") { DropPlanner.fmt(it) })
+            }
+        }
+        session.apply(if (els.size == 1) "Move ${els[0].localName}" else "Move ${els.size} Controls", edits)
+    }
 
     override fun getPreferredSize(): Dimension {
         val r = session.render ?: return Dimension(400, 300)

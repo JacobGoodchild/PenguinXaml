@@ -158,7 +158,7 @@ class DesignerSession(val project: Project, val file: VirtualFile, val document:
             Notifications.info(project, "This file has no code-behind (.axaml.cs) with an x:Class, so event handlers can't be added.")
             return
         }
-        val csDoc = FileDocumentManager.getInstance().getDocument(csFile) ?: return
+        val csDoc = ApplicationManager.getApplication().runReadAction<Document?> { FileDocumentManager.getInstance().getDocument(csFile) } ?: return
         val existing = el.attrValue(event)
         val method = existing ?: CodeBehind.handlerName(csDoc.text, el, event)
         val result = CodeBehind.addHandler(csDoc.text, className, method, args,
