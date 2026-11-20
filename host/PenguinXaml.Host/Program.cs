@@ -20,6 +20,9 @@ public static class Program
             return 0;
         }
 
+        // The XAML loader only finds types in assemblies already loaded: make sure the themes projects use are.
+        GC.KeepAlive(typeof(Avalonia.Themes.Fluent.FluentTheme).Assembly);
+
         AppBuilder.Configure<DesignApp>()
             .UseSkia()
             .UseHarfBuzz()

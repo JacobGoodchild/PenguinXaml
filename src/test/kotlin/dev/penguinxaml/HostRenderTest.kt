@@ -48,4 +48,21 @@ class HostRenderTest {
         assertFalse(answer.get("ok").asBoolean)
         assertFalse(answer.get("error").asString.contains("   at "), "no stack traces for users")
     }
+
+    @Test fun `the project's App styles and resources are applied`() {
+        assumeTrue(dotnet != null && dll.exists(), "needs the built helper and .NET 10")
+        val app = """
+            <Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+              <Application.Resources><SolidColorBrush x:Key="Brand">#FF0000</SolidColorBrush></Application.Resources>
+              <Application.Styles>
+                <FluentTheme />
+                <Style Selector="Border.brand"><Setter Property="Background" Value="{StaticResource Brand}" /></Style>
+              </Application.Styles>
+            </Application>""".trimIndent()
+        val window = """<Window xmlns="https://github.com/avaloniaui" Width="100" Height="100"><Border Classes="brand" /></Window>"""
+        val answer = render(window, app)
+        assertTrue(answer.get("ok").asBoolean, answer.toString().take(300))
+        val img = javax.imageio.ImageIO.read(HostClient.parseRender(answer).png.inputStream())
+        assertEquals(0xFF0000, img.getRGB(img.width / 2, img.height / 2) and 0xFFFFFF, "the App.axaml style should paint the border red")
+    }
 }

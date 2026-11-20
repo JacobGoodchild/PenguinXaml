@@ -13,7 +13,7 @@
       <TextBox x:Name="NameBox" Watermark="Your name" />
       <CheckBox Content="Remember me" />
     </StackPanel>
-    <Image Grid.Row="1" Grid.Column="1" Source="/Assets/penguin.png" Width="96" Height="96" />
+    <Image Grid.Row="1" Grid.Column="1" Source="/Assets/logo.png" Width="96" Height="96" />
     <Button Grid.Row="2" Grid.Column="1" x:Name="OkButton" Classes="accent" Content="Say hello"
             HorizontalAlignment="Right" Click="OkButton_Click" />
   </Grid>

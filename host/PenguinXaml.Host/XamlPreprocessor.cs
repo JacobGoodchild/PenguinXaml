@@ -49,13 +49,15 @@ public static class XamlPreprocessor
             var myId = id++;
             var type = ResolveAvaloniaType(el);
             result.TypeNames[myId] = el.Name.LocalName;
-            if (type == null || !typeof(Control).IsAssignableFrom(type) || InsideTemplate(el)) continue;
+            if (type == null || !typeof(Control).IsAssignableFrom(type)) continue;
 
+            // Event handlers live in the code-behind, which isn't loaded: drop them everywhere, templates included.
             foreach (var attr in el.Attributes().ToList())
             {
                 if (attr.IsNamespaceDeclaration || attr.Name.Namespace != XNamespace.None) continue;
                 if (type.GetEvent(attr.Name.LocalName) != null) attr.Remove();
             }
+            if (InsideTemplate(el)) continue;
             if (typeof(Avalonia.Controls.Image).IsAssignableFrom(type) && el.Attribute("Source") is { } src && !src.Value.StartsWith('{'))
             {
                 result.ImageSources[myId] = src.Value;

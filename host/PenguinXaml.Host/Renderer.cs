@@ -162,11 +162,24 @@ public static class Renderer
         var nsDecls = root.Attributes().Where(a => a.IsNamespaceDeclaration).ToList();
         XElement? Section(string name) => root.Elements().FirstOrDefault(e => e.Name.LocalName == "Application." + name);
 
+        // Resources go inside the styles document, so styles that use {StaticResource ...} can find them.
+        var resources = Section("Resources");
+        XElement? resourceBlock = null;
+        if (resources != null)
+        {
+            var inner = resources.Elements().ToList();
+            var dict = inner.Count == 1 && inner[0].Name.LocalName == "ResourceDictionary"
+                ? new XElement(XName.Get("ResourceDictionary", XamlPreprocessor.AvaloniaNs), inner[0].Attributes().Where(a => !a.IsNamespaceDeclaration), inner[0].Nodes())
+                : new XElement(XName.Get("ResourceDictionary", XamlPreprocessor.AvaloniaNs), inner);
+            resourceBlock = new XElement(XName.Get("Styles.Resources", XamlPreprocessor.AvaloniaNs), dict);
+        }
         var styles = Section("Styles");
         var added = false;
-        if (styles != null)
+        foreach (var withResources in new[] { true, false })
         {
-            var s = new XElement(XName.Get("Styles", XamlPreprocessor.AvaloniaNs), nsDecls, styles.Elements());
+            if (added || (styles == null && resourceBlock == null)) break;
+            var s = new XElement(XName.Get("Styles", XamlPreprocessor.AvaloniaNs), nsDecls,
+                withResources ? resourceBlock : null, styles?.Elements());
             try
             {
                 if (AvaloniaRuntimeXamlLoader.Load(s.ToString(), typeof(DesignId).Assembly, designMode: true) is Styles loaded)
@@ -175,24 +188,10 @@ public static class Renderer
                     added = loaded.Count > 0;
                 }
             }
-            catch { /* fall back to the default theme below */ }
+            catch (Exception e) { Console.Error.WriteLine($"App styles not loaded (resources: {withResources}): {Messages.Plain(e)}"); }
         }
         if (!added) host.Styles.Insert(0, new FluentTheme());
 
-        var resources = Section("Resources");
-        if (resources != null)
-        {
-            var inner = resources.Elements().ToList();
-            var dict = inner.Count == 1 && inner[0].Name.LocalName == "ResourceDictionary"
-                ? new XElement(inner[0].Name, nsDecls, inner[0].Attributes().Where(a => !a.IsNamespaceDeclaration), inner[0].Nodes())
-                : new XElement(XName.Get("ResourceDictionary", XamlPreprocessor.AvaloniaNs), nsDecls, inner);
-            try
-            {
-                if (AvaloniaRuntimeXamlLoader.Load(dict.ToString(), typeof(DesignId).Assembly, designMode: true) is IResourceDictionary rd)
-                    host.Resources.MergedDictionaries.Add(rd);
-            }
-            catch { /* shown without them */ }
-        }
         if (root.Attribute("RequestedThemeVariant")?.Value is { } variant && variant != "Default")
             host.RequestedThemeVariant = variant == "Dark" ? ThemeVariant.Dark : ThemeVariant.Light;
     }
