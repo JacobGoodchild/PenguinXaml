@@ -1,0 +1,29 @@
+<idea-plugin>
+  <id>dev.penguinxaml</id>
+  <name>Penguin XAML</name>
+  <vendor url="https://github.com/JacobGoodchild/PenguinXaml">Jacob Goodchild</vendor>
+  <description><![CDATA[
+    <p>A drag-and-drop XAML designer for Avalonia apps on Linux, in the spirit of the classic WPF designer.</p>
+    <ul>
+      <li>Open a <code>.axaml</code> window to see it drawn above its XAML, kept in step both ways.</li>
+      <li>Drag controls in from the Toolbox; see which panel and which Grid row and column they will land in.</li>
+      <li>Select, move, resize and delete on the canvas; each change is one undo step.</li>
+      <li>Edit properties, add and resize Grid rows and columns, and double-click a button to write its Click handler.</li>
+      <li>Only the lines that change are touched, so your XAML formatting is kept.</li>
+    </ul>
+    <p>Needs the .NET 10 runtime. Works offline; the plugin makes no network requests.</p>
+  ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <fileEditorProvider implementation="dev.penguinxaml.editor.DesignerEditorProvider"/>
+    <toolWindow id="Penguin XAML Toolbox" anchor="left" secondary="true" icon="/icons/toolbox.svg"
+                factoryClass="dev.penguinxaml.toolwindows.ToolboxFactory" doNotActivateOnStart="true"/>
+    <toolWindow id="Penguin XAML Properties" anchor="right" icon="/icons/properties.svg"
+                factoryClass="dev.penguinxaml.toolwindows.PropertiesFactory" doNotActivateOnStart="true"/>
+    <toolWindow id="Penguin XAML Outline" anchor="left" icon="/icons/outline.svg"
+                factoryClass="dev.penguinxaml.toolwindows.OutlineFactory" doNotActivateOnStart="true"/>
+    <notificationGroup id="Penguin XAML" displayType="BALLOON"/>
+  </extensions>
+</idea-plugin>

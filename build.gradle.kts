@@ -95,9 +95,11 @@ val publishHost by tasks.registering(Exec::class) {
     outputs.dir(hostOut)
     environment("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
     environment("DOTNET_NOLOGO", "1")
+    // Avalonia's build package (Avalonia.BuildServices) reports usage during builds unless this is set.
+    environment("AVALONIA_TELEMETRY_OPTOUT", "1")
     commandLine(
         dotnet, "publish", file("host/PenguinXaml.Host/PenguinXaml.Host.csproj").absolutePath,
-        "-c", "Release", "-r", "linux-x64", "--self-contained", "false", "--locked-mode",
+        "-c", "Release", "-r", "linux-x64", "--self-contained", "false", "-p:RestoreLockedMode=true",
         "-p:DebugType=none", "-o", hostOut.get().asFile.absolutePath,
     )
 }
@@ -105,9 +107,11 @@ val publishHost by tasks.registering(Exec::class) {
 // Licence files of every NuGet package whose binaries ship in the plugin, taken from the restored packages so they
 // match host/PenguinXaml.Host/packages.lock.json. A missing one stops the build.
 val nugetPackages = File(System.getenv("NUGET_PACKAGES") ?: (System.getProperty("user.home") + "/.nuget/packages"))
-val shippedPackages = listOf(
-    "Avalonia", "Avalonia.Headless", "Avalonia.Skia", "Avalonia.Themes.Fluent", "Avalonia.Markup.Xaml.Loader",
-    "SkiaSharp", "SkiaSharp.NativeAssets.Linux", "HarfBuzzSharp", "HarfBuzzSharp.NativeAssets.Linux",
+// Packages that carry their own licence files:
+val shippedPackages = listOf("SkiaSharp", "SkiaSharp.NativeAssets.Linux", "HarfBuzzSharp", "HarfBuzzSharp.NativeAssets.Linux")
+// Packages whose licence text is kept in licenses/ (their packages only name the licence):
+val repoLicences = mapOf(
+    "Avalonia" to "Avalonia-LICENSE.md", "MicroCom.Runtime" to "MicroCom-LICENSE", "Avalonia.Fonts.Inter" to "Inter-OFL.txt",
 )
 val packageNotices by tasks.registering(Sync::class) {
     description = "Collects the licence files of the NuGet packages bundled with the design helper."
@@ -125,9 +129,11 @@ val packageNotices by tasks.registering(Sync::class) {
     doLast {
         for (name in shippedPackages)
             check(destinationDir.resolve(name).listFiles()?.isNotEmpty() == true) { "No licence file found for $name in $nugetPackages" }
-        check(file("THIRD-PARTY-NOTICES.md").readText().let { t -> shippedPackages.all { t.contains(it) } }) {
-            "THIRD-PARTY-NOTICES.md must name every bundled package: $shippedPackages"
-        }
+        for ((name, f) in repoLicences) check(file("licenses/$f").isFile) { "licenses/$f (for $name) is missing" }
+        // Every package in the lock file must be named in THIRD-PARTY-NOTICES.md.
+        val notices = file("THIRD-PARTY-NOTICES.md").readText()
+        val missing = resolved.keys.filter { !notices.contains(it) && !it.startsWith("Microsoft.") && it != "Avalonia.BuildServices" }
+        check(missing.isEmpty()) { "THIRD-PARTY-NOTICES.md doesn't mention: $missing" }
     }
 }
 
@@ -137,6 +143,7 @@ tasks.withType<org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask>(
     from("LICENSE") { into(pluginName.map { "$it/licenses" }) }
     from("THIRD-PARTY-NOTICES.md") { into(pluginName.map { "$it/licenses" }) }
     from(packageNotices) { into(pluginName.map { "$it/licenses/packages" }) }
+    from("licenses") { into(pluginName.map { "$it/licenses" }) }
 }
 
 // UI checks run in the free IntelliJ IDEA (the sandbox Rider needs a login): ./gradlew runIdea -PopenPath=...

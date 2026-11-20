@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>PenguinXaml.Host</AssemblyName>
     <RootNamespace>PenguinXaml.Host</RootNamespace>
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
     <!-- Exact versions; packages.lock.json pins the whole graph. -->
