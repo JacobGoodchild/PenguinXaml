@@ -414,7 +414,10 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 ghost = doubleArrayOf(left, top, d.box.w, d.box.h)
                 plan = planFor(x + sx, y + sy, left, top, dragged)
             }
-            is Drag.Resize -> ghost = resized(d, x, y)
+            is Drag.Resize -> {
+                val (r, lines) = snapResize(session.model.byId(d.box.id), resized(d, x, y), d.handle)
+                ghost = r; guides = lines
+            }
             is Drag.Marquee -> ghost = doubleArrayOf(minOf(d.startX, x), minOf(d.startY, y), kotlin.math.abs(x - d.startX), kotlin.math.abs(y - d.startY))
             is Drag.Grid -> ghost = if (d.rows) doubleArrayOf(d.box.x, y, d.box.w, 0.5) else doubleArrayOf(x, d.box.y, 0.5, d.box.h)
         }
@@ -537,6 +540,25 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 lines += doubleArrayOf(minOf(l, o.x), yv, maxOf(l + w, o.x + o.w), yv)
         }
         return Triple(dx, dy, lines)
+    }
+
+    /** While resizing, the moving edges snap to siblings' and the container's edges (within 5 screen pixels). */
+    private fun snapResize(el: dev.penguinxaml.xaml.XamlElement?, r: DoubleArray, handle: Int): Pair<DoubleArray, List<DoubleArray>> {
+        val parent = el?.parent?.let { if (it.isPropertyElement) it.parent else it } ?: return r to emptyList()
+        val others = (parent.objectChildren.filter { it !== el }.map { it.designId } + parent.designId)
+            .mapNotNull { id -> boxes().firstOrNull { it.id == id } }
+        val xs = others.flatMap { listOf(it.x, it.x + it.w) }
+        val ys = others.flatMap { listOf(it.y, it.y + it.h) }
+        val reach = 5 / zoom
+        fun near(v: Double, list: List<Double>) = list.minByOrNull { kotlin.math.abs(it - v) }?.takeIf { kotlin.math.abs(it - v) <= reach }
+        var (l, t) = r[0] to r[1]
+        var rt = r[0] + r[2]; var b = r[1] + r[3]
+        val lines = mutableListOf<DoubleArray>()
+        if (handle in listOf(0, 6, 7)) near(l, xs)?.let { l = it; lines += doubleArrayOf(it, minOf(t, ys.minOrNull() ?: t), it, maxOf(b, ys.maxOrNull() ?: b)) }
+        if (handle in listOf(2, 3, 4)) near(rt, xs)?.let { rt = it; lines += doubleArrayOf(it, minOf(t, ys.minOrNull() ?: t), it, maxOf(b, ys.maxOrNull() ?: b)) }
+        if (handle in listOf(0, 1, 2)) near(t, ys)?.let { t = it; lines += doubleArrayOf(minOf(l, xs.minOrNull() ?: l), it, maxOf(rt, xs.maxOrNull() ?: rt), it) }
+        if (handle in listOf(4, 5, 6)) near(b, ys)?.let { b = it; lines += doubleArrayOf(minOf(l, xs.minOrNull() ?: l), it, maxOf(rt, xs.maxOrNull() ?: rt), it) }
+        return doubleArrayOf(l, t, max(4.0, rt - l), max(4.0, b - t)) to lines
     }
 
     private fun resized(d: Drag.Resize, x: Double, y: Double): DoubleArray {
