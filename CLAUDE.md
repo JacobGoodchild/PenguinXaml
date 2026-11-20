@@ -90,6 +90,10 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
   machine's .NET and starting the IDE from the installed zip). Rider's own bundled .NET is tried last; whether
   Rider 2026.x bundles .NET 10 is not known here (the verifier's Rider download has no runtime folder).
 
+- Unbuilt project with design data: the design view says "Build the project to see your sample data in bindings."
+  instead of showing silent blanks. Helper is precompiled (ReadyToRun): first drawing ~0.6 s, then ~0.15 s for the
+  chess window at 200 %.
+
 **Fixed during IDE testing:** project App.axaml styles were silently dropped (the Fluent theme assembly wasn't
 loaded when the XAML loader looked for it, and resources were loaded apart from the styles that use them; the
 first sample hid it because Fluent has its own "accent" button style) — now covered by a pixel test; code-behind read without the read lock (IDE error); drop hint stuck after a drop;
