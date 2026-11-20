@@ -40,6 +40,8 @@ class HostRenderTest {
         val doc = dev.penguinxaml.xaml.XamlDocument.parse(xaml)
         for (e in result.elements) assertEquals(doc.byId(e.id)?.localName, e.type)
         assertTrue(result.png.size > 1000)
+        // The sample's view model isn't built in the test: the user gets a hint instead of silent blanks.
+        assertEquals("Build the project to see your sample data in bindings.", result.note)
     }
 
     @Test fun `broken xaml gives a plain message`() {

@@ -20,6 +20,8 @@ class RenderResult(
     val height: Double,
     val scale: Double,
     val elements: List<RenderedElement>,
+    /** A hint for the user (for example: build the project to see sample data), or null. */
+    val note: String? = null,
 )
 
 class RenderedElement(
@@ -149,6 +151,7 @@ class HostClient : Disposable {
             return RenderResult(
                 java.util.Base64.getDecoder().decode(obj.get("png").asString),
                 obj.get("width").asDouble, obj.get("height").asDouble, obj.get("scale").asDouble, els,
+                obj.get("note")?.takeIf { !it.isJsonNull }?.asString,
             )
         }
     }

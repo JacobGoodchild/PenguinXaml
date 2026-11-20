@@ -249,6 +249,12 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
             g.scale(1 / zoom, 1 / zoom)
             g.translate(-origin, -origin)
         }
+        // A gentle hint above the window (not an error), e.g. "Build the project to see your sample data in bindings."
+        if (session.error == null) session.render?.note?.let { note ->
+            g.font = UIUtil.getLabelFont().deriveFont(UIUtil.getFontSize(UIUtil.FontSize.SMALL))
+            g.color = UIUtil.getContextHelpForeground()
+            g.drawString(note, visibleRect.x + origin, visibleRect.y + JBUI.scale(4) + g.fontMetrics.ascent)
+        }
         session.error?.let { msg ->
             g.font = UIUtil.getLabelFont()
             val fm = g.fontMetrics

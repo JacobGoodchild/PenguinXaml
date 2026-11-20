@@ -30,6 +30,8 @@ public static class Renderer
         }
 
         var prepared = XamlPreprocessor.Prepare(r.Xaml);
+        var hadDesignData = prepared.Document.Descendants().Any(e => e.Name.LocalName.StartsWith("Design.", StringComparison.Ordinal));
+        string? note = null;
         object loaded;
         try
         {
@@ -40,6 +42,7 @@ public static class Renderer
         {
             XamlPreprocessor.RelaxBindings(prepared.Document);
             loaded = Load(prepared.Document);
+            if (hadDesignData) note = "Build the project to see your sample data in bindings.";
         }
 
         var surface = new Border { ClipToBounds = true };
@@ -122,6 +125,7 @@ public static class Renderer
         {
             ["ok"] = true, ["png"] = Convert.ToBase64String(png.ToArray()),
             ["width"] = Round(size.Width), ["height"] = Round(size.Height), ["scale"] = scale, ["elements"] = elements,
+            ["note"] = note,
         };
     }
 
