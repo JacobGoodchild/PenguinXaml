@@ -65,7 +65,7 @@ class DesignerFileEditor(private val project: Project, private val file: Virtual
         project.getService(ActiveDesigner::class.java).activate(session)
         ToolWindowManager.getInstance(project).invokeLater {
             val twm = ToolWindowManager.getInstance(project)
-            for (id in ToolWindowIds.ALL) twm.getToolWindow(id)?.isAvailable = true
+            for (id in ToolWindowIds.ALL) twm.getToolWindow(id)?.let { it.isAvailable = true; it.isShowStripeButton = true }
         }
         session.scheduleRender(0)
     }

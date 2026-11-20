@@ -40,6 +40,8 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         class Move(sx: Double, sy: Double, val box: RenderedElement) : Drag(sx, sy)
         class Resize(sx: Double, sy: Double, val box: RenderedElement, val handle: Int) : Drag(sx, sy)
         class Grid(sx: Double, sy: Double, val box: RenderedElement, val rows: Boolean, val index: Int) : Drag(sx, sy)
+        /** Drawing a selection box, started outside any control (or on the window's own background). */
+        class Marquee(sx: Double, sy: Double, val add: Boolean) : Drag(sx, sy)
     }
 
     init {
@@ -364,7 +366,12 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         gridBorderAt(x, y)?.let { drag = it; return }
         if (gridAddClicked(x, y)) return
         val b = hit(x, y)
-        if (b == null) { session.select(emptyList()); return }
+        // Empty space, the window, or the background of a panel that isn't selected yet: draw a selection box.
+        if (b == null || b.id == 0 || (b.container == "panel" && b.id !in session.selection && !e.isControlDown && !e.isShiftDown)) {
+            if (!e.isControlDown && !e.isShiftDown) session.select(if (b == null) emptyList() else listOf(b.id))
+            drag = Drag.Marquee(x, y, e.isControlDown || e.isShiftDown)
+            return
+        }
         if (e.isControlDown || e.isShiftDown) {
             session.select(if (b.id in session.selection) session.selection - b.id else session.selection + b.id)
             return
@@ -408,6 +415,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 plan = planFor(x + sx, y + sy, left, top, dragged)
             }
             is Drag.Resize -> ghost = resized(d, x, y)
+            is Drag.Marquee -> ghost = doubleArrayOf(minOf(d.startX, x), minOf(d.startY, y), kotlin.math.abs(x - d.startX), kotlin.math.abs(y - d.startY))
             is Drag.Grid -> ghost = if (d.rows) doubleArrayOf(d.box.x, y, d.box.w, 0.5) else doubleArrayOf(x, d.box.y, 0.5, d.box.h)
         }
         repaint()
@@ -423,6 +431,14 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         if (abs(x - d.startX) < 3 && abs(y - d.startY) < 3) return
         val doc = session.model
         when (d) {
+            is Drag.Marquee -> {
+                val r = g ?: return
+                // Controls entirely inside the box; not ones inside another picked control.
+                val inside = boxes().filter { it.id != 0 && it.x >= r[0] && it.y >= r[1] && it.x + it.w <= r[0] + r[2] && it.y + it.h <= r[1] + r[3] }
+                    .mapNotNull { doc.byId(it.id) }
+                val top = inside.filter { el -> inside.none { it !== el && it.isAncestorOf(el) } }.map { it.designId }
+                session.select(if (d.add) (session.selection.filter { it != 0 } + top).distinct() else top)
+            }
             is Drag.Move -> {
                 val el = doc.byId(d.box.id) ?: return
                 if (p == null) return
