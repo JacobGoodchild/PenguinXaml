@@ -1,9 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:HelloAvalonia"
         x:Class="HelloAvalonia.MainWindow"
+        x:DataType="local:MainWindowViewModel"
         Title="Hello Avalonia" Width="480" Height="300">
+  <Design.DataContext>
+    <local:MainWindowViewModel />
+  </Design.DataContext>
   <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,*" Margin="16">
-    <TextBlock Grid.ColumnSpan="2" Text="Welcome" FontSize="24" FontWeight="SemiBold" />
+    <TextBlock Grid.ColumnSpan="2" Text="{Binding Greeting}" FontSize="24" FontWeight="SemiBold" />
     <StackPanel Grid.Row="1" Spacing="8" Margin="0,12,8,0">
       <TextBox x:Name="NameBox" Watermark="Your name" />
       <CheckBox Content="Remember me" />

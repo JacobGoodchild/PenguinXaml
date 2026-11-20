@@ -35,7 +35,8 @@ public static class Renderer
         {
             loaded = Load(prepared.Document);
         }
-        catch (Exception) when (prepared.Document.Descendants().Any(e => e.Attributes().Any(a => a.Name.LocalName == "DataType")))
+        catch (Exception) when (prepared.Document.Descendants().Any(e => e.Attributes().Any(a => a.Name.LocalName == "DataType")
+                                                                      || e.Name.LocalName.StartsWith("Design.", StringComparison.Ordinal)))
         {
             XamlPreprocessor.RelaxBindings(prepared.Document);
             loaded = Load(prepared.Document);
@@ -68,6 +69,10 @@ public static class Renderer
         {
             throw new InvalidOperationException($"A {loaded.GetType().Name} can't be shown in the designer.");
         }
+
+        // Design-time data (<Design.DataContext>) so bindings show real values, as in the running app.
+        if (loaded is Control root && root.IsSet(Design.DataContextProperty))
+            surface.DataContext = Design.GetDataContext(root);
 
         if (!double.IsNaN(width)) surface.Width = width;
         if (!double.IsNaN(height)) surface.Height = height;

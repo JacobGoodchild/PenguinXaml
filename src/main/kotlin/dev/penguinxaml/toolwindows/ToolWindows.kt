@@ -187,7 +187,7 @@ class OutlineFactory : DesignerToolWindowFactory() {
                     fun add(node: DefaultMutableTreeNode, el: XamlElement) {
                         val n = DefaultMutableTreeNode(el)
                         node.add(n)
-                        for (c in el.children) if (c.isPropertyElement) c.objectChildren.forEach { add(n, it) } else add(n, c)
+                        for (c in el.children) if (c.isPropertyElement) { if (!c.localName.startsWith("Design.")) c.children.filter { !it.isPropertyElement }.forEach { add(n, it) } } else add(n, c)
                     }
                     doc?.root?.let { add(root, it) }
                     model.reload()

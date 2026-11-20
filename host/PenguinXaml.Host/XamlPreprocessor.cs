@@ -74,6 +74,9 @@ public static class XamlPreprocessor
             foreach (var a in el.Attributes().Where(a => a.Name.Namespace == XamlNs && a.Name.LocalName is "DataType" or "CompileBindings").ToList())
                 a.Remove();
         doc.Root!.SetAttributeValue(XName.Get("CompileBindings", XamlNs), "False");
+        // Design-time data whose type isn't built yet: show the window without it.
+        foreach (var d in doc.Descendants().Where(e => e.Name.LocalName.StartsWith("Design.", StringComparison.Ordinal)).ToList())
+            d.Remove();
     }
 
     public static bool IsPropertyElement(XElement el) => el.Name.LocalName.Contains('.');
