@@ -33,6 +33,8 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
     private var drag: Drag? = null
     private var plan: DropPlan? = null
     private var ghost: DoubleArray? = null
+    /** Snap lines shown while moving: x1, y1, x2, y2 in design pixels. */
+    private var guides: List<DoubleArray> = emptyList()
 
     private sealed class Drag(val startX: Double, val startY: Double) {
         class Move(sx: Double, sy: Double, val box: RenderedElement) : Drag(sx, sy)
@@ -236,6 +238,11 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 g.fillRect(h[0].roundToInt(), h[1].roundToInt(), max(2, h[2].roundToInt()), max(2, h[3].roundToInt()))
                 paintLabel(g, p.label, h[0], h[1])
             }
+            if (guides.isNotEmpty()) {
+                g.color = SNAP
+                g.stroke = BasicStroke((1 / zoom).toFloat())
+                for (l in guides) g.draw(java.awt.geom.Line2D.Double(l[0], l[1], l[2], l[3]))
+            }
             ghost?.let { gh -> if (gh[2] > 0) { g.color = SELECT; g.stroke = DASH; g.drawRect(gh[0].roundToInt(), gh[1].roundToInt(), gh[2].roundToInt(), gh[3].roundToInt()) } }
             g.scale(1 / zoom, 1 / zoom)
             g.translate(-origin, -origin)
@@ -391,10 +398,14 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         val (x, y) = toDesign(e.x, e.y)
         when (d) {
             is Drag.Move -> {
-                val left = d.box.x + x - d.startX
-                val top = d.box.y + y - d.startY
+                var left = d.box.x + x - d.startX
+                var top = d.box.y + y - d.startY
+                val dragged = session.model.byId(d.box.id)
+                val (sx, sy, lines) = snap(dragged, left, top, d.box.w, d.box.h)
+                left += sx; top += sy
+                guides = lines
                 ghost = doubleArrayOf(left, top, d.box.w, d.box.h)
-                plan = planFor(x, y, left, top, session.model.byId(d.box.id))
+                plan = planFor(x + sx, y + sy, left, top, dragged)
             }
             is Drag.Resize -> ghost = resized(d, x, y)
             is Drag.Grid -> ghost = if (d.rows) doubleArrayOf(d.box.x, y, d.box.w, 0.5) else doubleArrayOf(x, d.box.y, 0.5, d.box.h)
@@ -407,7 +418,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         drag = null
         val (x, y) = toDesign(e.x, e.y)
         val g = ghost; val p = plan
-        ghost = null; plan = null
+        ghost = null; plan = null; guides = emptyList()
         repaint()
         if (abs(x - d.startX) < 3 && abs(y - d.startY) < 3) return
         val doc = session.model
@@ -487,6 +498,31 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         }
     }
 
+    /**
+     * Snaps a moving control's edges and centre to its siblings' and its container's (within 5 screen pixels).
+     * Returns the x and y corrections and the guide lines to draw.
+     */
+    private fun snap(el: dev.penguinxaml.xaml.XamlElement?, left: Double, top: Double, w: Double, h: Double): Triple<Double, Double, List<DoubleArray>> {
+        if (el == null) return Triple(0.0, 0.0, emptyList())
+        val parent = el.parent?.let { if (it.isPropertyElement) it.parent else it } ?: return Triple(0.0, 0.0, emptyList())
+        val others = (parent.objectChildren.filter { it !== el }.map { it.designId } + parent.designId)
+            .mapNotNull { id -> boxes().firstOrNull { it.id == id } }
+        val reach = 5 / zoom
+        fun best(mine: List<Double>, theirs: List<Double>): Double? =
+            mine.flatMap { m -> theirs.map { t -> t - m } }.filter { kotlin.math.abs(it) <= reach }.minByOrNull { kotlin.math.abs(it) }
+        val dx = best(listOf(left, left + w / 2, left + w), others.flatMap { listOf(it.x, it.x + it.w / 2, it.x + it.w) }) ?: 0.0
+        val dy = best(listOf(top, top + h / 2, top + h), others.flatMap { listOf(it.y, it.y + it.h / 2, it.y + it.h) }) ?: 0.0
+        val lines = mutableListOf<DoubleArray>()
+        val l = left + dx; val t = top + dy
+        for (o in others) {
+            for (xv in listOf(l, l + w / 2, l + w)) if (listOf(o.x, o.x + o.w / 2, o.x + o.w).any { kotlin.math.abs(it - xv) < 0.01 } && dx != 0.0)
+                lines += doubleArrayOf(xv, minOf(t, o.y), xv, maxOf(t + h, o.y + o.h))
+            for (yv in listOf(t, t + h / 2, t + h)) if (listOf(o.y, o.y + o.h / 2, o.y + o.h).any { kotlin.math.abs(it - yv) < 0.01 } && dy != 0.0)
+                lines += doubleArrayOf(minOf(l, o.x), yv, maxOf(l + w, o.x + o.w), yv)
+        }
+        return Triple(dx, dy, lines)
+    }
+
     private fun resized(d: Drag.Resize, x: Double, y: Double): DoubleArray {
         val b = d.box
         var l = b.x; var t = b.y; var r = b.x + b.w; var btm = b.y + b.h
@@ -500,6 +536,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         val SELECT = JBColor(0x3574F0, 0x548AF7)
         val DROP = JBColor(0x3574F0, 0x548AF7)
         val DROP_FILL = JBColor(Color(0x35, 0x74, 0xF0, 0x22), Color(0x54, 0x8A, 0xF7, 0x33))
+        val SNAP = JBColor(Color(0xD6, 0x3B, 0x8F), Color(0xE8, 0x6B, 0xB0))
         val RAIL = JBColor(Color(0x35, 0x74, 0xF0, 0x30), Color(0x54, 0x8A, 0xF7, 0x40))
         val DASH = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 3f), 0f)
 

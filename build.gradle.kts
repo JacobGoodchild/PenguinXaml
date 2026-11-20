@@ -59,7 +59,9 @@ intellijPlatform {
         ides {
             val localIde = providers.gradleProperty("verifyLocalIde").orNull
             if (localIde != null) local(localIde) else {
-                for (v in listOf("2026.1", "2026.2", "2026.3"))
+                // -PverifyRiders=2026.1 checks only that one (each Rider is a ~3 GB download).
+                val versions = providers.gradleProperty("verifyRiders").orNull?.split(',')?.map { it.trim() } ?: listOf("2026.1", "2026.2", "2026.3")
+                for (v in versions)
                     create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.Rider, v) { useInstaller = false }
             }
         }
