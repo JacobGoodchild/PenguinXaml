@@ -109,7 +109,64 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         on("ctrl EQUALS|ctrl ADD|ctrl shift EQUALS") { zoom *= 1.25 }
         on("ctrl MINUS|ctrl SUBTRACT") { zoom /= 1.25 }
         on("ctrl 0|ctrl NUMPAD0") { zoom = 1.0 }
+        on("ctrl C") { copySelection() }
+        on("ctrl X") { if (copySelection()) deleteSelection() }
+        on("ctrl V") { paste() }
+        on("ctrl D") { if (copySelection()) paste() }
         on("ENTER") { session.selectedElements.singleOrNull()?.let { el -> Toolbox.defaultEvent(el.localName)?.let { session.goToHandler(el, it.first, it.second) } } }
+    }
+
+    /** Copies the selected controls' XAML (as written, children included) to the clipboard. */
+    private fun copySelection(): Boolean {
+        val els = topSelection()
+        if (els.isEmpty()) return false
+        val text = els.joinToString("\n") { session.model.text.substring(it.start, it.end) }
+        com.intellij.openapi.ide.CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(text))
+        return true
+    }
+
+    /** Pastes XAML from the clipboard: into the selected panel, or next to the selected control (one undo step). */
+    private fun paste() {
+        val text = try {
+            com.intellij.openapi.ide.CopyPasteManager.getInstance().getContents<String>(DataFlavor.stringFlavor)
+        } catch (_: Exception) { null } ?: return
+        val doc = session.model
+        // Check it's XAML elements: wrap it so several siblings parse as one document.
+        val parsed = try { dev.penguinxaml.xaml.XamlDocument.parse("<P>$text</P>") } catch (_: Exception) { return }
+        val pieces = parsed.root?.children ?: return
+        if (pieces.isEmpty()) return
+        val sel = session.selectedElements.singleOrNull()
+        val selBox = sel?.let { s -> boxes().firstOrNull { it.id == s.designId } }
+        val (target, index) = when {
+            sel == null -> (doc.objects.getOrNull(1)?.takeIf { boxes().firstOrNull { b -> b.id == it.designId }?.container == "panel" } ?: return) to null
+            selBox?.container == "panel" -> sel to null
+            else -> {
+                val p = sel.parent?.let { if (it.isPropertyElement) it.parent else it } ?: return
+                p to p.objectChildren.indexOf(sel).let { if (it < 0) null else it + 1 }.let { i -> if (i != null && i >= p.objectChildren.size) null else i }
+            }
+        }
+        val edits = pieces.reversed().flatMap { piece ->
+            var xml = parsed.text.substring(piece.start, piece.end)
+            // Names must stay unique: OkButton → OkButton1.
+            for (el in piece.descendantsAndSelf().toList().asReversed()) {
+                val attr = el.attr("x:Name") ?: el.attr("Name") ?: continue
+                val taken = doc.objects.mapNotNull { it.xName }.toSet()
+                if (attr.value !in taken) continue
+                val base = attr.value.trimEnd { it.isDigit() }
+                val fresh = generateSequence(1) { it + 1 }.map { "$base$it" }.first { it !in taken }
+                xml = xml.substring(0, attr.valueStart - piece.start) + fresh + xml.substring(attr.valueEnd - piece.start)
+            }
+            XamlEdits.insertChild(doc, target, xml, index)
+        }
+        // Several pastes at one spot: merge into one insert so they keep their order.
+        val merged = if (edits.size > 1 && edits.all { it.start == edits[0].start && it.end == it.start })
+            listOf(dev.penguinxaml.xaml.TextEdit(edits[0].start, edits[0].start, edits.reversed().joinToString("") { it.text })) else edits
+        session.apply("Paste", merged)
+    }
+
+    private fun topSelection(): List<dev.penguinxaml.xaml.XamlElement> {
+        val els = session.selectedElements.filter { it.designId != 0 }
+        return els.filter { el -> els.none { it !== el && it.isAncestorOf(el) } }
     }
 
     /** Arrow keys move the selected controls by changing Canvas.Left/Top or the Margin (one undo step). */
