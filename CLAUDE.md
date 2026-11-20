@@ -46,6 +46,8 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 - `./gradlew test buildPlugin` → `build/distributions/penguin-xaml-<version>.zip` (Java 21, .NET 10 SDK). Built
   against IntelliJ IDEA 2026.1.5.1 (oldest supported platform); no until-build.
 - `./gradlew verifyPlugin -PverifyRiders=2026.1` checks one Rider; `-PverifyLocalIde=/path` an IDE on disk.
+- To test the real zip: unzip it into a separate plugins folder and start IntelliJ IDEA's `bin/idea.sh` with
+  `IDEA_PROPERTIES` pointing at config/system/plugins/log folders of its own (see git history for the exact setup).
 - `tools/run-idea.sh <project> <log> [file]` starts the test IDE on Xvfb :99 (`UISCALE=2` for 200 %),
   `tools/ui.sh` clicks/drags/types, `tools/shot.sh` takes screenshots (test machine only).
 - `./gradlew runIdea -PopenPath=samples/HelloAvalonia -PtestMachine` for UI checks in the free IntelliJ IDEA (the
@@ -84,6 +86,9 @@ assembly `PenguinXaml.Host`, user-facing name "Penguin XAML".
 - Broken XAML: the last picture stays, a plain message names the line ("<CheckBox> is missing its closing > or
   />."), and designer edits are refused until it's fixed (they're computed from the last readable text).
 - UserControl files use d:DesignWidth / d:DesignHeight (test).
+- No .NET 10 anywhere: a short, wrapped message says what to install and where it looked (checked by hiding this
+  machine's .NET and starting the IDE from the installed zip). Rider's own bundled .NET is tried last; whether
+  Rider 2026.x bundles .NET 10 is not known here (the verifier's Rider download has no runtime folder).
 
 **Fixed during IDE testing:** project App.axaml styles were silently dropped (the Fluent theme assembly wasn't
 loaded when the XAML loader looked for it, and resources were loaded apart from the styles that use them; the

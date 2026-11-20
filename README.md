@@ -3,7 +3,7 @@
 A drag-and-drop XAML designer for [Avalonia](https://avaloniaui.net) apps in JetBrains Rider on Linux, modelled on
 the classic WPF designer: XAML for the look, C# code-behind, and a design view kept in sync with the XAML.
 
-![Penguin XAML in the IDE: Document Outline, XAML, design view and Properties](docs/screenshots/ide-dark-multi-select-outline-and-shared-properties.png)
+![A chess app open in Penguin XAML: the XAML beside the design view](docs/screenshots/ide-light-chess-sample-in-designer.png)
 
 ## Requirements
 
