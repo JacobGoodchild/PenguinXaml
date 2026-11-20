@@ -25,6 +25,11 @@ import kotlin.math.roundToInt
  */
 class DesignSurface(private val session: DesignerSession, parent: Disposable) : JPanel(), Disposable {
     private val origin get() = JBUI.scale(24)
+    /** Zoom of the design view (Ctrl+mouse wheel, Ctrl+= / Ctrl+- / Ctrl+0). The picture is redrawn at it, so stays sharp. */
+    var zoom = 1.0
+        private set(v) { field = v.coerceIn(0.25, 4.0); session.setScale(JBUIScale.sysScale(this).toDouble() * field); revalidate(); repaint() }
+    /** A size that stays the same on screen whatever the zoom (handles, strips). */
+    private fun px(v: Int) = JBUI.scale(v) / zoom
     private var drag: Drag? = null
     private var plan: DropPlan? = null
     private var ghost: DoubleArray? = null
@@ -47,6 +52,11 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
             override fun mouseMoved(e: MouseEvent) { cursor = cursorAt(e) }
         }
         addMouseListener(mouse)
+        addMouseWheelListener { e -> if (e.isControlDown) { zoom *= if (e.wheelRotation < 0) 1.1 else 1 / 1.1; e.consume() } else {
+            // Plain scrolling still scrolls the view (a wheel listener here would otherwise swallow it).
+            val sp = javax.swing.SwingUtilities.getAncestorOfClass(javax.swing.JScrollPane::class.java, this)
+            sp?.dispatchEvent(javax.swing.SwingUtilities.convertMouseEvent(this, e, sp))
+        } }
         addMouseMotionListener(mouse)
         registerShortcuts()
         DropTarget(this, DnDConstants.ACTION_COPY, object : DropTargetAdapter() {
@@ -96,6 +106,9 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
             on(key) { nudge(dx.toDouble(), dy.toDouble()) }
             on("shift $key") { nudge(dx * 10.0, dy * 10.0) }
         }
+        on("ctrl EQUALS|ctrl ADD|ctrl shift EQUALS") { zoom *= 1.25 }
+        on("ctrl MINUS|ctrl SUBTRACT") { zoom /= 1.25 }
+        on("ctrl 0|ctrl NUMPAD0") { zoom = 1.0 }
         on("ENTER") { session.selectedElements.singleOrNull()?.let { el -> Toolbox.defaultEvent(el.localName)?.let { session.goToHandler(el, it.first, it.second) } } }
     }
 
@@ -121,10 +134,10 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
 
     override fun getPreferredSize(): Dimension {
         val r = session.render ?: return Dimension(400, 300)
-        return Dimension((r.width + 2 * origin / 1.0).roundToInt() + origin, (r.height + 2 * origin / 1.0).roundToInt() + origin)
+        return Dimension((r.width * zoom).roundToInt() + 3 * origin, (r.height * zoom).roundToInt() + 3 * origin)
     }
 
-    private fun toDesign(x: Int, y: Int): Pair<Double, Double> = (x - origin).toDouble() to (y - origin).toDouble()
+    private fun toDesign(x: Int, y: Int): Pair<Double, Double> = (x - origin) / zoom to (y - origin) / zoom
 
     private fun toolType(t: java.awt.datatransfer.Transferable): String? = try {
         (t.getTransferData(DataFlavor.stringFlavor) as? String)?.takeIf { it.startsWith(Toolbox.PREFIX) }?.removePrefix(Toolbox.PREFIX)
@@ -147,9 +160,10 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
         val r = session.render
         val img = session.image
-        session.setScale(JBUIScale.sysScale(this).toDouble())
+        session.setScale(JBUIScale.sysScale(this).toDouble() * zoom)
         if (r != null && img != null) {
             g.translate(origin, origin)
+            g.scale(zoom, zoom)
             g.color = JBColor.border()
             g.drawRect(-1, -1, r.width.roundToInt() + 1, r.height.roundToInt() + 1)
             // Drawn at its design size: on a scaled screen the picture's extra pixels give a sharp result.
@@ -166,6 +180,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
                 paintLabel(g, p.label, h[0], h[1])
             }
             ghost?.let { gh -> if (gh[2] > 0) { g.color = SELECT; g.stroke = DASH; g.drawRect(gh[0].roundToInt(), gh[1].roundToInt(), gh[2].roundToInt(), gh[3].roundToInt()) } }
+            g.scale(1 / zoom, 1 / zoom)
             g.translate(-origin, -origin)
         }
         session.error?.let { msg ->
@@ -187,7 +202,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
     }
 
     private fun paintLabel(g: Graphics2D, text: String, x: Double, y: Double) {
-        g.font = UIUtil.getLabelFont().deriveFont(UIUtil.getFontSize(UIUtil.FontSize.SMALL))
+        g.font = UIUtil.getLabelFont().deriveFont((UIUtil.getFontSize(UIUtil.FontSize.SMALL) / zoom).toFloat())
         val fm = g.fontMetrics
         val w = fm.stringWidth(text) + JBUI.scale(8)
         val h = fm.height + JBUI.scale(2)
@@ -201,7 +216,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
     /** Above and left of a selected Grid: its rows and columns, with a + to add one and borders to drag. */
     private fun paintGridRails(g: Graphics2D) {
         val grid = selectedGrid() ?: return
-        val rail = JBUI.scale(12)
+        val rail = px(12).roundToInt()
         g.color = RAIL
         g.fillRect(grid.x.roundToInt(), grid.y.roundToInt() - rail - 2, grid.w.roundToInt(), rail)
         g.fillRect(grid.x.roundToInt() - rail - 2, grid.y.roundToInt(), rail, grid.h.roundToInt())
@@ -239,11 +254,11 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
 
     /** The eight resize handles, clockwise from top-left. */
     private fun handles(b: RenderedElement): List<Rectangle> {
-        val s = JBUI.scale(6)
+        val s = px(6)
         val xs = listOf(b.x, b.x + b.w / 2, b.x + b.w)
         val ys = listOf(b.y, b.y + b.h / 2, b.y + b.h)
         val pts = listOf(0 to 0, 1 to 0, 2 to 0, 2 to 1, 2 to 2, 1 to 2, 0 to 2, 0 to 1)
-        return pts.map { (i, j) -> Rectangle((xs[i] - s / 2).roundToInt(), (ys[j] - s / 2).roundToInt(), s, s) }
+        return pts.map { (i, j) -> Rectangle((xs[i] - s / 2).roundToInt(), (ys[j] - s / 2).roundToInt(), s.roundToInt().coerceAtLeast(2), s.roundToInt().coerceAtLeast(2)) }
     }
 
     private fun handleAt(x: Double, y: Double): Pair<RenderedElement, Int>? {
@@ -255,7 +270,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
 
     private fun gridBorderAt(x: Double, y: Double): Drag.Grid? {
         val grid = selectedGrid() ?: return null
-        val rail = JBUI.scale(12) + 2
+        val rail = px(12) + 2
         if (y in grid.y - rail..grid.y && x in grid.x..grid.x + grid.w) {
             var acc = grid.x
             grid.cols.dropLast(1).forEachIndexed { i, c -> acc += c; if (abs(acc - x) < 4) return Drag.Grid(x, y, grid, false, i) }
@@ -298,7 +313,7 @@ class DesignSurface(private val session: DesignerSession, parent: Disposable) : 
     private fun gridAddClicked(x: Double, y: Double): Boolean {
         val grid = selectedGrid() ?: return false
         val el = session.model.byId(grid.id) ?: return false
-        val rail = JBUI.scale(12) + 2
+        val rail = px(12) + 2
         val rows = when {
             y in grid.y - rail..grid.y - 1 && x in grid.x..grid.x + grid.w -> false
             x in grid.x - rail..grid.x - 1 && y in grid.y..grid.y + grid.h -> true

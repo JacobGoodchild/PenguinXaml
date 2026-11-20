@@ -109,3 +109,14 @@ class XamlEditsTest {
         assertEquals("50,70,0,0", p.set["Margin"])
     }
 }
+
+class PropertiesTest {
+    @Test fun `shared values, blank where they differ, and choices`() {
+        val d = XamlDocument.parse("<StackPanel><Button Width=\"80\" Content=\"A\" /><Button Width=\"80\" Content=\"B\" /></StackPanel>")
+        val rows = dev.penguinxaml.toolwindows.PropertiesModel.rowsFor(d.objects.drop(1))
+        assertEquals("80", rows.first { it.name == "Width" }.value)
+        assertEquals("", rows.first { it.name == "Content" }.value)
+        assertTrue(rows.none { it.event != null }, "events are for one control at a time")
+        assertArrayEquals(arrayOf("Left", "Center", "Right", "Stretch"), dev.penguinxaml.toolwindows.PropertiesModel.choices("HorizontalAlignment"))
+    }
+}

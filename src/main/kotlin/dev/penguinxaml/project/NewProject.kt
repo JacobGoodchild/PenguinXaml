@@ -1,6 +1,5 @@
 package dev.penguinxaml.project
 
-import com.intellij.ide.impl.OpenProjectTask
 import com.intellij.ide.impl.ProjectUtil
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -179,7 +178,7 @@ class NewAvaloniaAppAction : DumbAwareAction() {
         val main = File(root, "${dialog.name.text.trim()}/MainWindow.axaml")
         // Opening a project may first close the current one, so it runs in the background, not on the UI thread.
         com.intellij.openapi.components.service<OpenerScope>().scope.launch {
-            val project = ProjectUtil.openOrImportAsync(Path.of(root.path), OpenProjectTask { forceOpenInNewFrame = true }) ?: return@launch
+            val project = ProjectUtil.openOrImportAsync(Path.of(root.path)) ?: return@launch
             // Start where a WPF user expects: the main window open in the designer.
             val file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(main) ?: return@launch
             withContext(kotlinx.coroutines.Dispatchers.EDT) {
