@@ -85,7 +85,13 @@ New Project used a blocking open that hung when closing the current project; spl
 - Snap lines while moving (edges and centres of siblings and the container): screenshot mid-drag.
 - Design-time data: `<Design.DataContext>` with the project's own view model shows bound text (helper render,
   `docs/screenshots/helper-design-data-binding-shows-view-model-text.png`); without a build it draws without it.
-- Plugin checker: compatible with IntelliJ IDEA 2026.1 and **real Rider 2026.1 (RD-261.22158.336), no warnings**.
+- Plugin checker: **compatible with real Rider 2026.1 (RD-261.22158.336), 2026.2 (RD-262.8665.329) and 2026.3
+  (RD-263.7307.259) with no warnings**, after replacing internal/deprecated calls (`OpenProjectTask`,
+  `PluginManagerCore.getPlugin`, `PluginManager.getPluginByClass`, `FileEditorManager.openFile/openTextEditor`).
+  Don't reintroduce them: the plugin finds its folder with `PathManager.getJarPathForClass`, files open with
+  `OpenFileDescriptor.navigate`.
+- The built zip itself, installed into a clean IntelliJ IDEA (not the dev sandbox): helper starts from the zip's
+  `host/` folder and draws the sample (`docs/screenshots/ide-light-installed-from-zip.png`).
 
 **Not done:** GitHub Pages site; resize snapping; a `dotnet new` template for Rider's New Solution dialog;
 marquee (rubber-band) selection. (A rebuilt project restarts the helper so the new build is shown: .NET can't

@@ -182,7 +182,7 @@ class NewAvaloniaAppAction : DumbAwareAction() {
             // Start where a WPF user expects: the main window open in the designer.
             val file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().refreshAndFindFileByIoFile(main) ?: return@launch
             withContext(kotlinx.coroutines.Dispatchers.EDT) {
-                if (!project.isDisposed) com.intellij.openapi.fileEditor.FileEditorManager.getInstance(project).openFile(file, true)
+                if (!project.isDisposed) com.intellij.openapi.fileEditor.OpenFileDescriptor(project, file).navigate(true)
             }
         }
     }

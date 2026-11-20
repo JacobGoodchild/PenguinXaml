@@ -4,11 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
@@ -129,7 +127,9 @@ class HostClient : Disposable {
         /** Where the bundled helper is; `penguinxaml.hostDll` overrides it for development. */
         fun hostDll(): Path? {
             System.getProperty("penguinxaml.hostDll")?.let { return Path.of(it) }
-            val dir = PluginManagerCore.getPlugin(PluginId.getId(PLUGIN_ID))?.pluginPath ?: return null
+            // The plugin's folder: our jar is in <plugin>/lib/.
+            val jar = com.intellij.openapi.application.PathManager.getJarPathForClass(HostClient::class.java) ?: return null
+            val dir = Path.of(jar).parent?.parent ?: return null
             return dir.resolve("host/PenguinXaml.Host.dll").takeIf { File(it.toString()).exists() }
         }
 

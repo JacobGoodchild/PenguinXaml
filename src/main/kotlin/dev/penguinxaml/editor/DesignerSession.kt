@@ -9,7 +9,6 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -175,7 +174,7 @@ class DesignerSession(val project: Project, val file: VirtualFile, val document:
             for (e in result.edits.sortedByDescending { it.start }) csDoc.replaceString(e.start, e.end, e.text)
         })
         val offset = result.caretAfter ?: CodeBehind.methodOffset(csDoc.text, method) ?: 0
-        FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, csFile, offset), true)
+        OpenFileDescriptor(project, csFile, offset).navigate(true)
     }
 
     override fun dispose() {}
